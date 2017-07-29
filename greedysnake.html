@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+</head>
+<style>
+	.container{
+		float: left;
+		width: 300px;
+	}
+	.state{
+		float: left;
+		width: 600px;
+		height: 600px;
+		border: 1px solid black;
+		background: black;
+	}
+	.cell{
+		float: left;
+		width: 18px;
+		height: 18px;
+		background: black;
+		margin:1px; 
+	}
+	.active{
+		background: green;
+	}
+	.fruit{
+		background: red;
+	}
+	.score{
+		font-size: 30px;
+		text-align: center;
+	}
+	.buttons{
+		width: 200px;
+		margin: 0 auto;
+	}
+</style>
+<body>
+	<div class="container">
+		<div class="score">
+			<span>分数:</span>
+			<span id='score'>0</span>
+		</div>
+		<div class="buttons">
+			<button id='accelerate'>加速</button>
+			<button id='replay'>重新开始</button>
+			<button id='pause'>暂停</button>
+		</div>
+	</div>
+	<div class="state"></div>
+</body>
+<script src='../lib/jquery@2.2.4.min.js'></script>
+<script>
+	var direction = 1,//当前方向:1为右，-1为左，2为下，-2为上
+		snake = ['1-1'],//贪吃蛇本体
+		map = [],//所有的cell格子id,用于生成水果
+		fruit = 0,
+		keyDown = false,
+		score=0,
+		interval = 400,//速度
+		timer,//定时器
+		len;//每次吃水果后要重新计算
+	var pauseOrPlay = function*(){
+		while(true){
+			yield true;
+			yield false;
+		}
+	}
+	var nowState = pauseOrPlay();
+	document.onkeydown = function(e){
+		if(keyDown){
+			return;
+		}
+		switch((e||event).keyCode){
+			case 37:direction = (direction == 2|| direction == -2) ? -1:direction;break;
+			case 38:direction = (direction == 1|| direction == -1) ? -2:direction;break;
+			case 39:direction = (direction == 2|| direction == -2) ? 1:direction;break;
+			case 40:direction = (direction == 1|| direction == -1) ? 2:direction;break;
+			default:console.log(snake[0]);break;
+		}
+		keyDown = true;
+	}
+	function init(){
+		let fragment = "";
+		for(let i = 0;i<30;i++){
+			for(let j=0;j<30;j++){
+				fragment += "<i class = 'cell' id='"+i+'-'+j+"''></i>"
+				if((i+'-'+j) == '1-1'){
+					continue;
+				}else{
+					map.push(i+'-'+j);
+				}
+			}
+		}
+		$(".state").append(fragment);
+		len = map.length+1;
+		bear();
+	}
+	function bear(){
+		if(fruit == 0){
+			let index;
+			do{
+				index = ~~(Math.random()*len);
+				fruit = map[index];
+			}while(snake.includes(fruit))
+			$('#'+fruit).addClass('fruit');
+		}
+	}
+	function moveAnimation(){
+		keyDown = false;
+		let headLoc = snake[0].split("-");
+		let headRow = headLoc[0]|0;
+		let headCol = headLoc[1]|0;
+		let snakeBody = snake.slice(1);
+		switch(direction){
+			case -1:headCol--;break;
+			case 1:headCol++;break;
+			case -2:headRow--;break;
+			case 2:headRow++;break;
+			default:;break;
+		}
+		if(snakeBody.includes(snake[0])||headRow<0||headRow>29||headCol<0||headCol>29){
+			alert("Game Over");
+			return;
+		}
+		snake.unshift(headRow+'-'+headCol)
+		snake.forEach(function(value,index,arr){
+			$("#"+value).addClass("active");
+		})
+		if(snake[0] == fruit){//吃到了
+			score++;
+			switch(~~(score/100)){
+				case 0:interval = interval < 400 ? interval:400;break;
+				case 1:interval = interval <350 ? interval:350;break;
+				case 2:interval = interval <300 ? interval:300;break;
+				case 3:interval = interval <250 ? interval:250;break;
+				case 4:interval = interval <200 ? interval:200;break;
+				case 5:interval = interval <150 ? interval:150;break;
+				case 6:interval = interval <100 ? interval:100;break;
+				default:interval = 50;break;
+			}
+			$("#score").text(score);
+			let index = map.indexOf(fruit);
+			map.splice(index,1);
+			len = map.length;
+			$(".fruit").removeClass("fruit");
+			fruit = 0;
+			bear();
+		}else{
+			let tailLoc = snake.pop();
+			$("#"+tailLoc).removeClass("active");
+		}
+		timer = setTimeout(arguments.callee,interval);
+	}
+	$("#pause").on("click",function(){
+		let value = nowState.next().value;
+		if(value){
+			$(this).text("继续");
+			clearTimeout(timer);
+		}else{
+			$(this).text("暂停");
+			moveAnimation();
+		}
+	})
+	$("#replay").on("click",function(){
+		window.location.reload();
+	})
+	$("#accelerate").on("click",function(){
+		interval -= 50;
+		if(interval <=50){
+			interval = 50;
+		}
+	})
+	init();
+	moveAnimation();
+</script>
+</html>
